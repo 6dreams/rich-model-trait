@@ -5,13 +5,14 @@ namespace SixDreams\RichModel\Interfaces;
 
 /**
  * Interface RichModelInterface
- *
- * Используется для хранения констант для RichModelTrait. Так же является маркером, сообщающим о том, что сущность умеет __set.
- *
+ * Used only as constant storage.
  * @package SixDreams\RichModel\Interfaces
  */
 interface RichModelInterface
 {
-    // Обязательно должен быть ключ в массиве.
+    // Declaring this in richAccessMap, will throw exception, if some one try access not defined field in array.
     public const RICH_STRICT = '_rich_strict';
+
+    // Static field with access map.
+    public const RICH_MAP_NAME = 'richAccessMap';
 }

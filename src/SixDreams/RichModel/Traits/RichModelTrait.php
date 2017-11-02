@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace SixDreams\RichModel\Traits;
 
-use Doctrine\Common\Collections\Collection;
 use SixDreams\RichModel\Exception\RichModelCollectionException;
 use SixDreams\RichModel\Exception\RichModelFieldException;
 use SixDreams\RichModel\Interfaces\RichModelInterface;
@@ -22,6 +21,11 @@ trait RichModelTrait
     private $richAccessMapExists;
 
     /**
+     * @var \ReflectionClass
+     */
+    private $richClassReflection;
+
+    /**
      * Получить название поля в модели.
      *
      * @param string $name
@@ -30,23 +34,41 @@ trait RichModelTrait
      */
     public function getRichFieldName(string $name): string
     {
-        $this->richAccessMapExists = $this->richAccessMapExists ?? \property_exists($this, 'richAccessMap');
+        $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
 
-        if (!$this->richAccessMapExists) {
-            return \lcfirst($name);
+        // Checking and saving information about richAccessMap.
+        if ($this->richAccessMapExists === null) {
+            $this->richAccessMapExists = false;
+            if ($this->richClassReflection->hasProperty(RichModelInterface::RICH_MAP_NAME)) {
+                if (!$this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME)->isStatic()) {
+                    throw new RichModelFieldException(RichModelInterface::RICH_MAP_NAME . ' must be static!');
+                }
+
+                $this->richAccessMapExists = true;
+            }
         }
 
-        $map = self::$richAccessMap;
+        $field = $this->richAccessMapExists ? null : \lcfirst($name);
 
-        if (\array_key_exists($name, $map)) {
-            return $map[$name];
+        if ($this->richAccessMapExists) {
+            $mapReflection = $this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME);
+            $mapReflection->setAccessible(true);
+            $map = $mapReflection->getValue();
+
+            if (\array_key_exists($name, $map)) {
+                $field = $map[$name];
+            }
+
+            if (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
+                $field = \lcfirst($name);
+            }
         }
 
-        if (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
-            return \lcfirst($name);
+        if ($field === null || !$this->richClassReflection->hasProperty($field)) {
+            throw new RichModelFieldException(sprintf('Field %d not found!', $name));
         }
 
-        throw new RichModelFieldException();
+        return $field;
     }
 
     /**
@@ -59,71 +81,64 @@ trait RichModelTrait
      */
     public function __call($name, array $arguments = [])
     {
-        // Если используется геттер
+        // Getting value from model.
         if (0 === \strpos($name, 'get')) {
-            $propertyName = $this->getRichFieldName(\substr($name, 3));
-            if (\property_exists($this, $propertyName)) {
-                return $this->{$propertyName};
-            }
+            return $this->{$this->getRichFieldName(\substr($name, 3))};
         }
 
-        // Если используется is-геттер
+        // Getting boolean value from model.
         if (0 === \strpos($name, 'is')) {
-            $propertyName = $this->getRichFieldName(\substr($name, 2));
-            if (\property_exists($this, $propertyName) && (null === $this->{$propertyName} || \is_bool($this->{$propertyName}))) {
-                return $this->{$propertyName} === true;
-            }
+            return $this->{$this->getRichFieldName(\substr($name, 2))} === true;
         }
 
-        // Если используется сеттер
+        // Setting value to model.
         if (0 === \strpos($name, 'set') && \count($arguments) === 1) {
+            $this->{$this->getRichFieldName(\substr($name, 3))} = $arguments[0];
+
+            return $this;
+        }
+
+        // Adding new element to array, collection in model.
+        if (0 === \strpos($name, 'add') && \count($arguments) === 1) {
             $propertyName = $this->getRichFieldName(\substr($name, 3));
-            if (\property_exists($this, $propertyName)) {
-                $this->{$propertyName} = $arguments[0];
+            if ($this->{$propertyName} instanceof \ArrayAccess) {
+                $this->{$propertyName}[] = $arguments[0];
 
                 return $this;
             }
+
+            throw new RichModelCollectionException();
         }
 
-        // Добавление в коллекцию (add)
-        if (0 === \strpos($name, 'add') && \count($arguments) === 1) {
-            $propertyName = $this->getRichFieldName(\substr($name, 3));
-            if (\property_exists($this, $propertyName)) {
-                if ($this->{$propertyName} instanceof Collection) {
-                    $this->{$propertyName}[] = $arguments[0];
-
-                    return $this;
-                }
-
-                throw new RichModelCollectionException();
-            }
-        }
-
-        // Удаление из коллекции (remove)
+        // Removing element from array, collection in model.
         if (0 === \strpos($name, 'remove') && \count($arguments) === 1) {
-            $propertyName = $this->getRichFieldName(\substr($name, 6)) . 's';
-            if (\property_exists($this, $propertyName)) {
-                if ($this->{$propertyName} instanceof Collection) {
-                    $this->{$propertyName}->removeElement($arguments[0]);
-
-                    return $this;
+            $propertyName = $this->getRichFieldName(\substr($name, 6));
+            if ($this->{$propertyName} instanceof \ArrayAccess) {
+                foreach ($this->{$propertyName} as $key => $value) {
+                    if ($value === $arguments[0]) {
+                        unset($this->{$propertyName}[$key]);
+                        break;
+                    }
                 }
 
-                throw new RichModelCollectionException();
+                return $this;
             }
+
+            throw new RichModelCollectionException();
         }
 
-        // Sonata fix, за каким-то хреном вызываю __call с названием поля.
-        if (\property_exists($this, $name)) {
+        // This is fix for Sonata Project.
+        if ($this->richClassReflection->hasProperty($name)) {
             return $this->{$name};
         }
 
-        return null;
+        throw new RichModelFieldException(sprintf('Unrecognized function "%s", arguments count %d.', $name, \count($arguments)));
     }
 
     /**
-     * @param string $name
+     * Getting field value by it's name.
      *
+     * @param string $name
      * @return mixed
      * @throws RichModelFieldException
      */
@@ -135,7 +150,10 @@ trait RichModelTrait
     }
 
     /**
-     * {@inheritdoc}
+     * Set new value to model field.
+     *
+     * @param string $name  field name
+     * @param mixed  $value new field value
      * @throws RichModelFieldException
      */
     public function __set($name, $value)
@@ -148,11 +166,17 @@ trait RichModelTrait
     }
 
     /**
-     * {@inheritdoc}
-     * @throws RichModelFieldException
+     * Returns true, if field exists in model.
+     *
+     * @param string $name
+     * @return bool
      */
     public function __isset($name)
     {
-        return \property_exists($this, $this->getRichFieldName($name));
+        try {
+            return \property_exists($this, $this->getRichFieldName($name));
+        } catch (RichModelFieldException $e) {
+            return false;
+        }
     }
 }

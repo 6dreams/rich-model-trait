@@ -11,10 +11,12 @@ namespace SixDreams\RichModel\Exception;
 class RichModelFieldException extends \Exception
 {
     /**
-     * Empty constructor.
+     * RichModelFieldException constructor.
+     *
+     * @param string $text
      */
-    public function __construct()
+    public function __construct(string $text)
     {
-        parent::__construct();
+        parent::__construct($text);
     }
 }

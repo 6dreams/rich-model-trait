@@ -1,0 +1,3 @@
+RichModel.
+
+todo: rewrite me.
