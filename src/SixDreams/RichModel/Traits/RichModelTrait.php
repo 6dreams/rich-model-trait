@@ -128,7 +128,7 @@ trait RichModelTrait
         }
 
         // This is fix for Sonata Project.
-        if ($this->richClassReflection->hasProperty($name)) {
+        if (\property_exists($this, $name)) {
             return $this->{$name};
         }
 
