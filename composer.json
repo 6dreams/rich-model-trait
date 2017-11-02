@@ -1,0 +1,24 @@
+{
+    "name": "6dreams/rich-model-trait",
+    "description": "A rich replacement for your anemic getters and setters",
+    "version": "0.6.0",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": ".avolver",
+            "email": "avolver@gmail.com"
+        },
+        {
+            "name": ".fry",
+            "email": "fry@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "SixDreams\\RichModel\\": "src/SixDreams/RichModel"
+        }
+    },
+    "minimum-stability": "alpha",
+    "require-dev": {}
+}
