@@ -130,6 +130,8 @@ trait RichModelTrait
         // This is fix for Sonata Project.
         if (\property_exists($this, $name)) {
             return $this->{$name};
+        } elseif (\count($arguments) === 0) {
+            return null;
         }
 
         throw new RichModelFieldException(sprintf('Unrecognized function "%s", arguments count %d.', $name, \count($arguments)));
