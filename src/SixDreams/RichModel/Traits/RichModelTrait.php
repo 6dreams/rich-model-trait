@@ -9,14 +9,15 @@ use SixDreams\RichModel\Interfaces\RichModelInterface;
 
 /**
  * Trait RichEntityTrait
- * Трейт который позволяет избавиться от кучи тупых методов в сущностях, поддерживает set, get, is (только для boolean), так же,
- *  если указанный параметр является Collection (Doctrine), то может осуществлять add, remove.
+ * Trait for helping make your models more anemic, and remove helps to remove functions that will only perform
+ *  operations with properties and do not have additional logic.
  * @package SixDreams\RichModel\Traits
  */
 trait RichModelTrait
 {
     /**
-     * @var bool
+     * Flag: is model hava richAccessMap? Or null if we dont check it before.
+     * @var bool|null
      */
     private $richAccessMapExists;
 
@@ -26,7 +27,31 @@ trait RichModelTrait
     private $richClassReflection;
 
     /**
-     * Получить название поля в модели.
+     * @var \ReflectionProperty[]
+     */
+    private $richPropertiesReflection;
+
+    /**
+     * Internal method for checking existing "rich" field in model, uses Reflection::getProperties to get
+     *  all properties include private ones, because few frameworks make lazy-load.
+     *
+     * @param string $name
+     * @return bool
+     */
+    private function hasRichField(string $name): bool
+    {
+        foreach ($this->richPropertiesReflection as $reflection) {
+            if ($reflection->getName() === $name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Getting field name from function name. Also uses static RichModelInterface::RICH_MAP_NAME static array
+     *  to remap fields for user readable function names.
      *
      * @param string $name
      * @return string
@@ -35,10 +60,11 @@ trait RichModelTrait
     public function getRichFieldName(string $name): string
     {
         $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
+        $this->richPropertiesReflection = $this->richPropertiesReflection ?? $this->richClassReflection->getProperties();
         $exceptedName = \lcfirst($name);
 
         // Checking and saving information about richAccessMap.
-        if ($this->richAccessMapExists === null) {
+        if (null === $this->richAccessMapExists) {
             $this->richAccessMapExists = false;
             if ($this->richClassReflection->hasProperty(RichModelInterface::RICH_MAP_NAME)) {
                 if (!$this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME)->isStatic()) {
@@ -58,21 +84,21 @@ trait RichModelTrait
 
             if (\array_key_exists($exceptedName, $map)) {
                 $field = $map[$exceptedName];
-            }
-
-            if (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
+            } elseif (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
                 $field = $exceptedName;
             }
         }
 
-        if ($field === null || !$this->richClassReflection->hasProperty($field)) {
-            throw new RichModelFieldException(\sprintf('Field %s not found!', $name));
+        if (null === $field || !$this->hasRichField($field)) {
+            throw new RichModelFieldException(\sprintf('Field "%s" (remapped: %s) not found!', $name, $field));
         }
 
         return $field;
     }
 
     /**
+     * Magic method for handing functions with prefixes "get", "set", "add", "remove" and "is".
+     *
      * @param string $name
      * @param array  $arguments
      *
