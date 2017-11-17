@@ -35,6 +35,7 @@ trait RichModelTrait
     public function getRichFieldName(string $name): string
     {
         $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
+        $exceptedName = \lcfirst($name);
 
         // Checking and saving information about richAccessMap.
         if ($this->richAccessMapExists === null) {
@@ -48,24 +49,24 @@ trait RichModelTrait
             }
         }
 
-        $field = $this->richAccessMapExists ? null : \lcfirst($name);
+        $field = $this->richAccessMapExists ? null : $exceptedName;
 
         if ($this->richAccessMapExists) {
             $mapReflection = $this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME);
             $mapReflection->setAccessible(true);
             $map = $mapReflection->getValue();
 
-            if (\array_key_exists($name, $map)) {
-                $field = $map[$name];
+            if (\array_key_exists($exceptedName, $map)) {
+                $field = $map[$exceptedName];
             }
 
             if (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
-                $field = \lcfirst($name);
+                $field = $exceptedName;
             }
         }
 
         if ($field === null || !$this->richClassReflection->hasProperty($field)) {
-            throw new RichModelFieldException(sprintf('Field %d not found!', $name));
+            throw new RichModelFieldException(\sprintf('Field %s not found!', $name));
         }
 
         return $field;
@@ -132,7 +133,7 @@ trait RichModelTrait
             return $this->{$name};
         }
 
-        throw new RichModelFieldException(sprintf('Unrecognized function "%s", arguments count %d.', $name, \count($arguments)));
+        throw new RichModelFieldException(\sprintf('Unrecognized function "%s", arguments count %d.', $name, \count($arguments)));
     }
 
     /**
