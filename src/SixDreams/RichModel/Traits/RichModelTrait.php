@@ -32,6 +32,16 @@ trait RichModelTrait
     private $richPropertiesReflection;
 
     /**
+     * @var array
+     */
+    private $richAccessMapArray;
+
+    /**
+     * @var bool
+     */
+    private $richIsReadOnly;
+
+    /**
      * Internal method for checking existing "rich" field in model, uses Reflection::getProperties to get
      *  all properties include private ones, because few frameworks make lazy-load.
      *
@@ -50,18 +60,14 @@ trait RichModelTrait
     }
 
     /**
-     * Getting field name from function name. Also uses static RichModelInterface::RICH_MAP_NAME static array
-     *  to remap fields for user readable function names.
+     * Initialize rich model tools.
      *
-     * @param string $name
-     * @return string
      * @throws RichModelFieldException
      */
-    public function getRichFieldName(string $name): string
+    private function initRichModelUtils(): void
     {
         $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
         $this->richPropertiesReflection = $this->richPropertiesReflection ?? $this->richClassReflection->getProperties();
-        $exceptedName = \lcfirst($name);
 
         // Checking and saving information about richAccessMap.
         if (null === $this->richAccessMapExists) {
@@ -72,19 +78,46 @@ trait RichModelTrait
                 }
 
                 $this->richAccessMapExists = true;
+                $mapReflection = $this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME);
+                $mapReflection->setAccessible(true);
+                $this->richAccessMapArray = $mapReflection->getValue();
+                $this->richIsReadOnly = \array_key_exists(RichModelInterface::RICH_READONLY, $this->richAccessMapArray);
             }
         }
+    }
+
+    /**
+     * Throws exception if model is in read-only mode.
+     *
+     * @param string $name
+     * @throws RichModelFieldException
+     */
+    public function throwRichModelReadOnlyException(string $name): void
+    {
+        if ($this->richIsReadOnly) {
+            throw new RichModelFieldException(\sprintf('Cant write to execute method %s, model is readonly', $name));
+        }
+    }
+
+    /**
+     * Getting field name from function name. Also uses static RichModelInterface::RICH_MAP_NAME static array
+     *  to remap fields for user readable function names.
+     *
+     * @param string $name
+     * @return string
+     * @throws RichModelFieldException
+     */
+    public function getRichFieldName(string $name): string
+    {
+        $this->initRichModelUtils();
+        $exceptedName = \lcfirst($name);
 
         $field = $this->richAccessMapExists ? null : $exceptedName;
 
         if ($this->richAccessMapExists) {
-            $mapReflection = $this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME);
-            $mapReflection->setAccessible(true);
-            $map = $mapReflection->getValue();
-
-            if (\array_key_exists($exceptedName, $map)) {
-                $field = $map[$exceptedName];
-            } elseif (!\array_key_exists(RichModelInterface::RICH_STRICT, $map)) {
+            if (\array_key_exists($exceptedName, $this->richAccessMapArray)) {
+                $field = $this->richAccessMapArray[$exceptedName];
+            } elseif (!\array_key_exists(RichModelInterface::RICH_STRICT, $this->richAccessMapArray)) {
                 $field = $exceptedName;
             }
         }
@@ -108,6 +141,8 @@ trait RichModelTrait
      */
     public function __call($name, array $arguments = [])
     {
+        $this->initRichModelUtils();
+
         // Getting value from model.
         if (0 === \strpos($name, 'get')) {
             return $this->{$this->getRichFieldName(\substr($name, 3))};
@@ -120,6 +155,7 @@ trait RichModelTrait
 
         // Setting value to model.
         if (0 === \strpos($name, 'set') && \count($arguments) === 1) {
+            $this->throwRichModelReadOnlyException($name);
             $this->{$this->getRichFieldName(\substr($name, 3))} = $arguments[0];
 
             return $this;
@@ -127,8 +163,9 @@ trait RichModelTrait
 
         // Adding new element to array, collection in model.
         if (0 === \strpos($name, 'add') && \count($arguments) === 1) {
+            $this->throwRichModelReadOnlyException($name);
             $propertyName = $this->getRichFieldName(\substr($name, 3));
-            if ($this->{$propertyName} instanceof \ArrayAccess) {
+            if ($this->{$propertyName} instanceof \ArrayAccess || \is_array($this->{$propertyName})) {
                 $this->{$propertyName}[] = $arguments[0];
 
                 return $this;
@@ -139,8 +176,9 @@ trait RichModelTrait
 
         // Removing element from array, collection in model.
         if (0 === \strpos($name, 'remove') && \count($arguments) === 1) {
+            $this->throwRichModelReadOnlyException($name);
             $propertyName = $this->getRichFieldName(\substr($name, 6));
-            if ($this->{$propertyName} instanceof \ArrayAccess) {
+            if ($this->{$propertyName} instanceof \ArrayAccess || \is_array($this->{$propertyName})) {
                 foreach ($this->{$propertyName} as $key => $value) {
                     if ($value === $arguments[0]) {
                         unset($this->{$propertyName}[$key]);
@@ -189,6 +227,7 @@ trait RichModelTrait
     {
         $name = $this->getRichFieldName($name);
 
+        $this->throwRichModelReadOnlyException($name);
         if (\property_exists($this, $name)) {
             $this->{$name} = $value;
         }
