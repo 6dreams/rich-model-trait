@@ -9,7 +9,7 @@ use SixDreams\RichModel\Interfaces\RichModelInterface;
 
 /**
  * Trait RichEntityTrait
- * Trait for helping make your models more anemic, and remove helps to remove functions that will only perform
+ * Trait for helping make your models more anemic, and helps to remove functions that will only perform
  *  operations with properties and do not have additional logic.
  * @package SixDreams\RichModel\Traits
  */
@@ -92,7 +92,7 @@ trait RichModelTrait
      * @param string $name
      * @throws RichModelFieldException
      */
-    public function throwRichModelReadOnlyException(string $name): void
+    private function throwRichModelReadOnlyException(string $name): void
     {
         if ($this->richIsReadOnly) {
             throw new RichModelFieldException(\sprintf('Cant write to execute method %s, model is readonly', $name));
@@ -107,7 +107,7 @@ trait RichModelTrait
      * @return string
      * @throws RichModelFieldException
      */
-    public function getRichFieldName(string $name): string
+    private function getRichFieldName(string $name): string
     {
         $this->initRichModelUtils();
         $exceptedName = \lcfirst($name);
