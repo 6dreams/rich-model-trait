@@ -9,7 +9,7 @@ use SixDreams\RichModel\Interfaces\RichModelInterface;
 
 /**
  * Trait RichEntityTrait
- * Trait for helping make your models more anemic, and helps to remove functions that will only perform
+ * Trait for helping make your models less anemic, and helps to remove functions that will only perform
  *  operations with properties and do not have additional logic.
  * @package SixDreams\RichModel\Traits
  */
