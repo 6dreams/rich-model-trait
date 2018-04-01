@@ -14,6 +14,9 @@
             "email": "fry@6dreams.net"
         }
     ],
+    "require" : {
+        "php": ">=7.1"
+    },
     "autoload": {
         "psr-4": {
             "SixDreams\\RichModel\\": "src/SixDreams/RichModel"
