@@ -16,7 +16,7 @@ use SixDreams\RichModel\Interfaces\RichModelInterface;
 trait RichModelTrait
 {
     /**
-     * Flag: is model hava richAccessMap? Or null if we dont check it before.
+     * Flag: is model have richAccessMap? Or null if we don't check it before.
      * @var bool|null
      */
     private $richAccessMapExists;
@@ -25,11 +25,6 @@ trait RichModelTrait
      * @var \ReflectionClass
      */
     private $richClassReflection;
-
-    /**
-     * @var \ReflectionProperty[]
-     */
-    private $richPropertiesReflection;
 
     /**
      * @var array
@@ -41,23 +36,6 @@ trait RichModelTrait
      */
     private $richIsReadOnly;
 
-    /**
-     * Internal method for checking existing "rich" field in model, uses Reflection::getProperties to get
-     *  all properties include private ones, because few frameworks make lazy-load.
-     *
-     * @param string $name
-     * @return bool
-     */
-    private function hasRichField(string $name): bool
-    {
-        foreach ($this->richPropertiesReflection as $reflection) {
-            if ($reflection->getName() === $name) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     /**
      * Initialize rich model tools.
@@ -67,7 +45,6 @@ trait RichModelTrait
     private function initRichModelUtils(): void
     {
         $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
-        $this->richPropertiesReflection = $this->richPropertiesReflection ?? $this->richClassReflection->getProperties();
 
         // Checking and saving information about richAccessMap.
         if (null === $this->richAccessMapExists) {
@@ -90,6 +67,7 @@ trait RichModelTrait
      * Throws exception if model is in read-only mode.
      *
      * @param string $name
+     *
      * @throws RichModelFieldException
      */
     private function throwRichModelReadOnlyException(string $name): void
@@ -104,7 +82,9 @@ trait RichModelTrait
      *  to remap fields for user readable function names.
      *
      * @param string $name
+     *
      * @return string
+     *
      * @throws RichModelFieldException
      */
     private function getRichFieldName(string $name): string
@@ -122,7 +102,7 @@ trait RichModelTrait
             }
         }
 
-        if (null === $field || !$this->hasRichField($field)) {
+        if (null === $field || !$this->richClassReflection->hasProperty($field)) {
             throw new RichModelFieldException(\sprintf('Field "%s" (remapped: %s) not found!', $name, $field));
         }
 
@@ -136,6 +116,7 @@ trait RichModelTrait
      * @param array  $arguments
      *
      * @return null|mixed
+     *
      * @throws RichModelFieldException
      * @throws RichModelCollectionException
      */
@@ -206,7 +187,9 @@ trait RichModelTrait
      * Getting field value by it's name.
      *
      * @param string $name
+     *
      * @return mixed
+     *
      * @throws RichModelFieldException
      */
     public function __get($name)
@@ -221,6 +204,7 @@ trait RichModelTrait
      *
      * @param string $name  field name
      * @param mixed  $value new field value
+     *
      * @throws RichModelFieldException
      */
     public function __set($name, $value)
@@ -237,6 +221,7 @@ trait RichModelTrait
      * Returns true, if field exists in model.
      *
      * @param string $name
+     *
      * @return bool
      */
     public function __isset($name)
