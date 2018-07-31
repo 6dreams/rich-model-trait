@@ -5,8 +5,6 @@ namespace SixDreams\RichModel\Exception;
 
 /**
  * Class RichModelCollectionException
- *
- * @package SixDreams\RichModel\Exception
  */
 class RichModelCollectionException extends \Exception
 {

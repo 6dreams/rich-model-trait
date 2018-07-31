@@ -5,8 +5,6 @@ namespace SixDreams\RichModel\Exception;
 
 /**
  * Class RichModelFieldException
- *
- * @package SixDreams\RichModel\Exception
  */
 class RichModelFieldException extends \Exception
 {

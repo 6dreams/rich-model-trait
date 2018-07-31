@@ -11,7 +11,6 @@ use SixDreams\RichModel\Interfaces\RichModelInterface;
  * Trait RichEntityTrait
  * Trait for helping make your models less anemic, and helps to remove functions that will only perform
  *  operations with properties and do not have additional logic.
- * @package SixDreams\RichModel\Traits
  */
 trait RichModelTrait
 {
@@ -47,11 +46,11 @@ trait RichModelTrait
         $this->richClassReflection = $this->richClassReflection ?? new \ReflectionClass($this);
 
         // Checking and saving information about richAccessMap.
-        if (null === $this->richAccessMapExists) {
+        if ($this->richAccessMapExists === null) {
             $this->richAccessMapExists = false;
             if ($this->richClassReflection->hasProperty(RichModelInterface::RICH_MAP_NAME)) {
                 if (!$this->richClassReflection->getProperty(RichModelInterface::RICH_MAP_NAME)->isStatic()) {
-                    throw new RichModelFieldException(RichModelInterface::RICH_MAP_NAME . ' must be static!');
+                    throw new RichModelFieldException(\sprintf('%s must be static!', RichModelInterface::RICH_MAP_NAME));
                 }
 
                 $this->richAccessMapExists = true;
@@ -102,7 +101,7 @@ trait RichModelTrait
             }
         }
 
-        if (null === $field || !$this->richClassReflection->hasProperty($field)) {
+        if (!$field || !$this->richClassReflection->hasProperty($field)) {
             throw new RichModelFieldException(\sprintf('Field "%s" (remapped: %s) not found!', $name, $field));
         }
 
@@ -125,17 +124,17 @@ trait RichModelTrait
         $this->initRichModelUtils();
 
         // Getting value from model.
-        if (0 === \strpos($name, 'get')) {
+        if (\strncmp($name, 'get', 3) === 0) {
             return $this->{$this->getRichFieldName(\substr($name, 3))};
         }
 
         // Getting boolean value from model.
-        if (0 === \strpos($name, 'is')) {
+        if (\strncmp($name, 'is', 2) === 0) {
             return $this->{$this->getRichFieldName(\substr($name, 2))} === true;
         }
 
         // Setting value to model.
-        if (0 === \strpos($name, 'set') && \count($arguments) === 1) {
+        if (\strncmp($name, 'set', 3) === 0 && \count($arguments) === 1) {
             $this->throwRichModelReadOnlyException($name);
             $this->{$this->getRichFieldName(\substr($name, 3))} = $arguments[0];
 
@@ -143,7 +142,7 @@ trait RichModelTrait
         }
 
         // Adding new element to array, collection in model.
-        if (0 === \strpos($name, 'add') && \count($arguments) === 1) {
+        if (\strncmp($name, 'add', 3) === 0 && \count($arguments) === 1) {
             $this->throwRichModelReadOnlyException($name);
             $propertyName = $this->getRichFieldName(\substr($name, 3));
             if ($this->{$propertyName} instanceof \ArrayAccess || \is_array($this->{$propertyName})) {
@@ -156,7 +155,7 @@ trait RichModelTrait
         }
 
         // Removing element from array, collection in model.
-        if (0 === \strpos($name, 'remove') && \count($arguments) === 1) {
+        if (\strncmp($name, 'remove', 6) === 0 && \count($arguments) === 1) {
             $this->throwRichModelReadOnlyException($name);
             $propertyName = $this->getRichFieldName(\substr($name, 6));
             if ($this->{$propertyName} instanceof \ArrayAccess || \is_array($this->{$propertyName})) {
@@ -176,7 +175,9 @@ trait RichModelTrait
         // This is fix for Sonata Project.
         if (\property_exists($this, $name)) {
             return $this->{$name};
-        } elseif (\count($arguments) === 0) {
+        }
+
+        if (\count($arguments) === 0) {
             return null;
         }
 
@@ -215,6 +216,14 @@ trait RichModelTrait
         if (\property_exists($this, $name)) {
             $this->{$name} = $value;
         }
+    }
+
+    /**
+     * We need update reflection or code will crash.
+     */
+    public function __wakeup()
+    {
+        $this->richClassReflection = new \ReflectionClass($this);
     }
 
     /**

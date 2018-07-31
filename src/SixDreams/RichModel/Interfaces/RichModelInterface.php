@@ -6,7 +6,6 @@ namespace SixDreams\RichModel\Interfaces;
 /**
  * Interface RichModelInterface
  * Used only as constant storage.
- * @package SixDreams\RichModel\Interfaces
  */
 interface RichModelInterface
 {
