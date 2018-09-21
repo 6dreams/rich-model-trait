@@ -17,4 +17,12 @@ interface RichModelInterface
 
     // Static field with access map.
     public const RICH_MAP_NAME = 'richAccessMap';
+
+    public const RICH_FIELD_NAMES = [
+        'richAccessMap'       => null,
+        'richAccessMapExists' => null,
+        'richClassReflection' => null,
+        'richAccessMapArray'  => null,
+        'richIsReadOnly'      => null
+    ];
 }

@@ -185,6 +185,28 @@ trait RichModelTrait
     }
 
     /**
+     * Removes richModelTrait specific properties from serialization.
+     *
+     * {@inheritdoc}
+     *
+     * @return array
+     */
+    public function __sleep(): array
+    {
+        return (array) \array_reduce(
+            $this->richClassReflection->getProperties(),
+            function (array $items, \ReflectionProperty $property) {
+                if (!$property->isStatic() && !\array_key_exists($property->getName(), RichModelInterface::RICH_FIELD_NAMES)) {
+                    $items[] = $property->getName();
+                }
+
+                return $items;
+            },
+            []
+        );
+    }
+
+    /**
      * Getting field value by it's name.
      *
      * @param string $name
