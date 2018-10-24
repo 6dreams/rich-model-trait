@@ -1,7 +1,7 @@
 {
     "name": "6dreams/rich-model-trait",
     "description": "A rich replacement for your anemic getters and setters",
-    "version": "0.6.2",
+    "version": "0.6.3",
     "type": "library",
     "license": "MIT",
     "authors": [
