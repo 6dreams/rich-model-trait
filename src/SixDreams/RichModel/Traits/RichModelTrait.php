@@ -191,7 +191,7 @@ trait RichModelTrait
      *
      * @return array
      */
-    public function __sleep(): array
+    public function __sleep()
     {
         return (array) \array_reduce(
             $this->richClassReflection->getProperties(),
