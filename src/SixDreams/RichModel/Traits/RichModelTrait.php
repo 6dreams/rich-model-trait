@@ -190,9 +190,12 @@ trait RichModelTrait
      * {@inheritdoc}
      *
      * @return array
+     *
+     * @throws RichModelFieldException
      */
     public function __sleep()
     {
+        $this->initRichModelUtils();
         return (array) \array_reduce(
             $this->richClassReflection->getProperties(),
             function (array $items, \ReflectionProperty $property) {
